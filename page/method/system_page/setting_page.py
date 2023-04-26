@@ -41,9 +41,11 @@ class SettingPage(BaseMethod):
         获取Wi-Fi的开关状态
         :return:
         """
-        result = self.get_cmd_result("adb shell dumpsys wifi | grep Wi-Fi")
-        if "Wi-Fi is enabled" in result:
-            return True
+        if self.platform == GlobalVar.IOS:
+            return True if self.get_attribute(LOCATOR.wifi_switch, "value") == "1" else False
         else:
-            return False
-
+            result = self.get_cmd_result("adb shell dumpsys wifi | grep Wi-Fi")
+            if "Wi-Fi is enabled" in result:
+                return True
+            else:
+                return False

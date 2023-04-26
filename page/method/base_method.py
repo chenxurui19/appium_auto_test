@@ -70,12 +70,12 @@ class BaseMethod:
         att, scroll = self.get_element_attributes(el)
         x = att['center_x']
         y = att['center_y']
-        if self.platform == GlobalVar.ANDROID:
-            self.tap(x, y, duration)
-        else:
+        if self.platform == GlobalVar.IOS:
             duration = duration / 1000
             self.driver.execute_script("mobile: dragFromToForDuration",
                                        {"fromX": x, "fromY": y, "toX": x, "toY": y, "duration": duration})
+        else:
+            self.tap(x, y, duration)
         return el
 
     def get_element(self, locator, index=0):
@@ -195,10 +195,10 @@ class BaseMethod:
         """
 
         def wait_text(self, text, timeout=10):
-            if self.platform == GlobalVar.ANDROID:
-                locator = (MobileBy.ANDROID_UIAUTOMATOR, f'text("{text}")')
-            else:
+            if self.platform == GlobalVar.IOS:
                 locator = (MobileBy.NAME, text)
+            else:
+                locator = (MobileBy.ANDROID_UIAUTOMATOR, f'text("{text}")')
             try:
                 element = WebDriverWait(self.driver, timeout, 0.1).until(
                     EC.presence_of_element_located(locator))
@@ -279,11 +279,11 @@ class BaseMethod:
         """
         读取toast信息文本
         """
-        if self.platform == GlobalVar.ANDROID:
-            toast_element = (MobileBy.XPATH, '//*[contains(@text,"%s")]' % message)
-        else:
+        if self.platform == GlobalVar.IOS:
             toast_element = (MobileBy.XPATH, f'//*[contains(@name, "{message}")]')
             # toast_element = (MobileBy.NAME, message)
+        else:
+            toast_element = (MobileBy.XPATH, '//*[contains(@text,"%s")]' % message)
         toast = WebDriverWait(self.driver, 10, 0.1).until(EC.presence_of_element_located(toast_element))
         return toast.text
 
@@ -318,9 +318,7 @@ class BaseMethod:
         :param duration:
         :return:
         """
-        if self.platform == GlobalVar.ANDROID:
-            self.driver.swipe(start_x, start_y, end_x, end_y, duration)
-        else:
+        if self.platform == GlobalVar.IOS:
             if not duration or duration < 500:
                 duration = 0.5
             else:
@@ -328,6 +326,29 @@ class BaseMethod:
             self.driver.execute_script("mobile: dragFromToForDuration",
                                        {"fromX": start_x, "fromY": start_y, "toX": end_x, "toY": end_y,
                                         "duration": duration})
+        else:
+            self.driver.swipe(start_x, start_y, end_x, end_y, duration)
+
+    def get_element_attributes(self, locator, index=0):
+        """"
+        获取控件位置和大小信息
+        :param locator:
+        :return:
+        """
+        if isinstance(locator, tuple):
+            element = self.get_element(locator, index)
+        else:
+            element = locator
+        return {
+            'top': element.location['y'],
+            'bottom': element.location['y'] + element.size['height'],
+            'left': element.location['x'],
+            'right': element.location['x'] + element.size['width'],
+            'width': element.size['width'],
+            'height': element.size['height'],
+            'center_x': (element.size['width'] / 2) + element.location['x'],
+            'center_y': (element.size['height'] / 2) + element.location['y']
+        }
 
     def swipe_by_element(self, direction, start, end, percent, locator=None, duration=None):
         """
@@ -403,21 +424,21 @@ class BaseMethod:
         打开系统设置页，注意每台Android各有千秋
         :return:
         """
-        if GlobalVar.get_test_platform() == 'android':
-            # https://www.cnblogs.com/candyzhmm/p/11427960.html
-            cmd = "adb -s {} shell am start com.android.settings/com.android.settings.Settings".\
-                format(GlobalVar.get_device_sn())
-            os.system(cmd)
-        else:
+        if self.platform == GlobalVar.IOS:
             self.driver.execute_script("mobile:terminateApp", {"bundleId": "com.apple.Preferences"})
             time.sleep(3)
             self.driver.execute_script("mobile:launchApp", {"bundleId": "com.apple.Preferences"})
+        else:
+            # https://www.cnblogs.com/candyzhmm/p/11427960.html
+            cmd = "adb -s {} shell am start com.android.settings/com.android.settings.Settings". \
+                format(GlobalVar.get_device_sn())
+            os.system(cmd)
 
     def terminate_settting(self):
-        if GlobalVar.get_test_platform() == 'android':
-            pass
-        else:
+        if self.platform == GlobalVar.IOS:
             self.driver.execute_script("mobile:terminateApp", {"bundleId": "com.apple.Preferences"})
+        else:
+            pass
 
     def adb_command(self, command):
         """
@@ -442,6 +463,18 @@ class BaseMethod:
         """
         self.adb_command('svc wifi disable')
 
+    def tap(self, x, y, duration=400):
+        """
+        点击坐标
+        :param x:
+        :param y:
+        :return:
+        """
+        if self.platform == GlobalVar.IOS:
+            self.driver.execute_script("mobile: tap", {"x": x, "y": y, "duration": duration})
+        else:
+            self.driver.tap([(x, y)], duration)
+
     def tap_middle(self):
         """
         点击屏幕正中央
@@ -450,11 +483,11 @@ class BaseMethod:
         udid = GlobalVar.get_device_sn()
         x = self.driver.get_window_size()['width']
         y = self.driver.get_window_size()['height']
-        if GlobalVar.get_test_platform() == 'android':
-            cmd = f'adb -s {udid} shell input tap {x/2} {y/2}'
-            os.system(cmd)
+        if self.platform == GlobalVar.IOS:
+            self.tap(x / 2, y / 2)
         else:
-            self.tap(x/2, y/2)
+            cmd = f'adb -s {udid} shell input tap {x / 2} {y / 2}'
+            os.system(cmd)
 
     def long_click_middle(self, duration=3000):
         """
@@ -463,12 +496,12 @@ class BaseMethod:
         """
         x = self.driver.get_window_size()['width'] / 2
         y = self.driver.get_window_size()['height'] / 2
-        if GlobalVar.get_test_platform() == 'android':
-            os.system(f'adb -s {GlobalVar.get_device_sn()} shell input swipe {x} {y} {x} {y} {duration}')
-        else:
+        if self.platform == GlobalVar.IOS:
             duration = duration / 1000
             self.driver.execute_script("mobile: dragFromToForDuration",
                                        {"fromX": x, "fromY": y, "toX": x, "toY": y, "duration": duration})
+        else:
+            os.system(f'adb -s {GlobalVar.get_device_sn()} shell input swipe {x} {y} {x} {y} {duration}')
 
     def get_attribute(self, locator, name="text"):
         """

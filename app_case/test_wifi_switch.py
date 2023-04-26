@@ -34,10 +34,12 @@ class Test1:
         time.sleep(3)
         if setting.get_wifi_status():
             logging.info("测试：关闭Wi-Fi开关按钮")
+            # iPhone的Wi-Fi开关容易点击不到，建议用坐标进行点击
             setting.click_wifi_switch()
             time.sleep(3)
-            assert setting.get_wifi_status(), "关闭失败"
+            assert not setting.get_wifi_status(), "关闭失败"
         logging.info("测试：打开Wi-Fi开关按钮")
+        # iPhone的Wi-Fi开关容易点击不到，建议用坐标进行点击
         setting.click_wifi_switch()
         time.sleep(3)
         assert setting.get_wifi_status(), "打开失败"

@@ -11,6 +11,7 @@ class GlobalVar:
     BUNDLE_ID = "com.android.settings"
     APP_ACTIVITY = "com.android.settings.Settings"
     TEST_PLATFORM = "ios"
+    _RP_LOGGING = None
 
     @staticmethod
     def set_bundle_id(bundle_id):
@@ -43,5 +44,13 @@ class GlobalVar:
     @staticmethod
     def get_test_platform():
         return GlobalVar.TEST_PLATFORM
+
+    @staticmethod
+    def get_rp_logging():
+        return GlobalVar._RP_LOGGING
+
+    @staticmethod
+    def set_rp_logging(rp_logging):
+        GlobalVar._RP_LOGGING = rp_logging
 
 
